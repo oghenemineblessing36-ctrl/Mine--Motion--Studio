@@ -33,7 +33,7 @@
         <div class="field full"><label for="zoom">Motion strength <span id="zoomLabel">18%</span></label><input id="zoom" type="range" min="5" max="35" value="18"><div class="range-row"><span>Subtle</span><span>More movement</span></div></div>
         <div class="field full"><label for="fps">Video smoothness</label><select id="fps"><option value="24">24 FPS · smaller file</option><option value="30" selected>30 FPS · smooth</option></select></div>
       </div>
-      <div class="tip">Export format: WebM video. Most recent Chrome for Android versions support recording canvas animations, but some editing apps may prefer MP4. If your editor does not accept WebM, convert it to MP4 in a trusted video editor/converter.</div>
+      <div class="tip">Export format: MP4 when your browser supports MP4 recording; otherwise WebM. MP4 support depends on your phone and browser.</div>
     </section>
     <section class="card">
       <h3>3 · Preview your movement</h3>
@@ -47,8 +47,8 @@
       <button class="btn primary" id="exportBtn" style="width:100%">Export story video</button>
       <div class="progress" id="progress"><div id="bar"></div></div>
       <div class="status" id="exportStatus">Ready when you are. No account, API key, or subscription required.</div>
-      <a id="downloadLink" class="btn primary hidden" style="display:block;text-align:center;text-decoration:none;margin-top:12px" download="mine-motion-story.webm">Download video</a>
-      <div class="tip">This is a starter version of your own app. It creates the visual motion video only; narration, background music, subtitles and MP4 export are not included yet.</div>
+      <a id="downloadLink" class="btn primary hidden" style="display:block;text-align:center;text-decoration:none;margin-top:12px" download="mine-motion-story.mp4">Download video</a>
+      <div class="tip">This version tries MP4 recording first. If your browser does not support it, it exports WebM instead. Narration, background music and subtitles are not included yet.</div>
     </section>
   </div>
   <div class="footer">Mine Motion Studio · runs locally in your browser · no AI generation credits used</div>
@@ -77,7 +77,7 @@ $('nextBtn').onclick=()=>{stopPreview();if(photos.length){current=(current+1)%ph
 function stopPreview(){if(raf)cancelAnimationFrame(raf);raf=null;$('playBtn').textContent='▶ Play preview'}
 function animatePreview(){if(!photos.length)return;stopPreview();$('playBtn').textContent='Ⅱ Pause preview';const dur=+$('duration').value*1000;previewStart=performance.now();function step(now){const elapsed=now-previewStart;const p=(elapsed%dur)/dur;current=Math.floor(elapsed/dur)%photos.length;drawFrame(current,p);$('previewStatus').textContent=`Previewing photo ${current+1} of ${photos.length}`;raf=requestAnimationFrame(step)}raf=requestAnimationFrame(step)}
 $('playBtn').onclick=()=>{if(raf)stopPreview();else animatePreview()};
-function mimeType(){for(const t of ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']){if(window.MediaRecorder&&MediaRecorder.isTypeSupported(t))return t}return ''}
+function supportedVideoType(){if(!window.MediaRecorder)return '';for(const t of ['video/mp4;codecs=avc1.42E01E','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']){try{if(MediaRecorder.isTypeSupported(t))return t}catch(e){}}return ''}
 $('exportBtn').onclick=async()=>{
  if(exporting)return;
  if(!photos.length){$('exportStatus').textContent='Please add at least one photo first.';return}
@@ -89,7 +89,7 @@ $('exportBtn').onclick=async()=>{
   // Draw the first frame before starting recording so the stream is not initially blank.
   drawFrame(0,0);
   stream=canvas.captureStream(fps);
-  const type=mimeType();
+  const type=supportedVideoType();
   const options={videoBitsPerSecond:2500000};if(type)options.mimeType=type;
   recorder=new MediaRecorder(stream,options);
   recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
@@ -121,12 +121,14 @@ $('exportBtn').onclick=async()=>{
   await new Promise(r=>setTimeout(r,300));
   if(recorder.state!=='inactive')recorder.stop();
   await done;
-  const blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});
+  const outputType=recorder.mimeType||type||'video/webm';
+  const isMp4=outputType.toLowerCase().includes('mp4');
+  const blob=new Blob(chunks,{type:outputType});
   if(!blob.size)throw new Error('The browser created an empty video. Try again in Chrome with one small photo.');
   if(lastUrl)URL.revokeObjectURL(lastUrl);
   lastUrl=URL.createObjectURL(blob);
-  const link=$('downloadLink');link.href=lastUrl;link.download='mine-motion-story.webm';link.classList.remove('hidden');
-  $('bar').style.width='100%';$('exportStatus').textContent=`Video ready · ${(blob.size/1024/1024).toFixed(1)} MB · ${total} seconds. Tap Download video to save it to your phone.`;
+  const link=$('downloadLink');link.href=lastUrl;link.download=isMp4?'mine-motion-story.mp4':'mine-motion-story.webm';link.textContent=isMp4?'Download MP4 video':'Download WebM video';link.classList.remove('hidden');
+  $('bar').style.width='100%';$('exportStatus').textContent=`${isMp4?'MP4':'WebM'} video ready · ${(blob.size/1024/1024).toFixed(1)} MB · ${total} seconds. Tap the download button to save it to your phone.`;
  }catch(err){
   $('exportStatus').textContent='Export could not finish: '+(err&&err.message?err.message:'unknown error')+'. Keep this page open and try again with one small photo.';
   try{if(recorder&&recorder.state!=='inactive')recorder.stop()}catch(e){}
