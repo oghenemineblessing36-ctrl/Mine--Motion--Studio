@@ -15,7 +15,7 @@
 <body>
 <div class="wrap">
   <header class="brand"><div class="logo">M</div><div><h1>Mine Motion Studio</h1><p>Bring your story photos to life</p></div><div class="badge">FREE • NO AI CREDITS</div></header>
-  <section class="hero"><h2>Simple Ken Burns photo videos</h2><p>Add your already-prepared story pictures, choose a gentle pan and zoom, then export a video. Your photos are processed on this device; they are not uploaded to a server.</p></section>
+  <section class="hero"><h2>Simple Ken Burns photo videos</h2><p>Add your already-prepared story pictures, choose a gentle pan and zoom, then export a video. Your photos and subtitles are processed on this device; they are not uploaded to a server.</p></section>
   <div class="grid">
     <section class="card">
       <h3>1 · Add your story photos</h3>
@@ -62,11 +62,20 @@
         <div class="actions"><button class="btn secondary" id="removeMusicBtn" type="button">Remove music</button></div>
         <div class="tip">Music loops if the story is longer than the track. Keep music volume lower than narration so the voice stays clear. Use audio you have permission to use.</div>
       </div>
+      <div class="field full" style="margin:0 0 14px;padding:12px;background:#131522;border:1px solid #303347;border-radius:12px">
+        <label for="subtitlesInput">Subtitles / story text (optional)</label>
+        <textarea id="subtitlesInput" rows="5" placeholder="Type your subtitles here, one sentence or short line per line..." style="width:100%;resize:vertical;background:#111320;color:var(--text);border:1px solid #3a3d52;border-radius:10px;padding:11px;font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif"></textarea>
+        <div class="controls" style="margin-top:10px">
+          <div class="field"><label for="subtitleSize">Subtitle size</label><select id="subtitleSize"><option value="28">Small</option><option value="36" selected>Medium</option><option value="46">Large</option></select></div>
+          <div class="field"><label for="subtitleColor">Text colour</label><select id="subtitleColor"><option value="#ffffff" selected>White</option><option value="#ffe08a">Gold</option><option value="#ffff00">Yellow</option></select></div>
+        </div>
+        <div class="tip">Enter one subtitle or sentence per line. The app will show each line in order, spread evenly across the full video, and burn the subtitles into the exported video. This is not automatic speech recognition; type the words yourself.</div>
+      </div>
       <button class="btn primary" id="exportBtn" style="width:100%">Export story video</button>
       <div class="progress" id="progress"><div id="bar"></div></div>
       <div class="status" id="exportStatus">Ready when you are. No account, API key, or subscription required.</div>
       <a id="downloadLink" class="btn primary hidden" style="display:block;text-align:center;text-decoration:none;margin-top:12px" download="mine-motion-story.mp4">Download video</a>
-      <div class="tip">This version tries MP4 recording first. If your browser does not support it, it exports WebM instead. Subtitles are not included yet.</div>
+      <div class="tip">This version tries MP4 recording first, with WebM fallback. Subtitles, narration and music are combined into the exported video.</div>
     </section>
   </div>
   <div class="footer">Mine Motion Studio · runs locally in your browser · no AI generation credits used</div>
@@ -84,7 +93,21 @@ const zw=sw/z,zh=sh/z;
 if(m==='left')sx+=(sw-zw)*p;else if(m==='right')sx+=(sw-zw)*(1-p);else if(m==='up')sy+=(sh-zh)*(1-p);else if(m==='down')sy+=(sh-zh)*p;else{sx+=(sw-zw)/2;sy+=(sh-zh)/2}
 sx=Math.max(0,Math.min(img.width-zw,sx));sy=Math.max(0,Math.min(img.height-zh,sy));
 ctx.fillStyle='#080910';ctx.fillRect(0,0,W,H);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,sx,sy,zw,zh,0,0,W,H)}
-function drawFrame(index,p){if(!photos.length){ctx.fillStyle='#080910';ctx.fillRect(0,0,canvas.width,canvas.height);return}drawCover(photos[index].img,p)}
+function subtitleLines(){return $('subtitlesInput').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)}
+function drawSubtitle(timeSeconds=0){
+ const lines=subtitleLines();if(!lines.length)return;
+ const dur=+$('duration').value,total=Math.max(0.1,photos.length*dur);
+ const activeIndex=Math.min(lines.length-1,Math.floor(Math.max(0,timeSeconds)/total*lines.length));
+ const text=lines[activeIndex];if(!text)return;
+ const W=canvas.width,H=canvas.height,base=+$('subtitleSize').value,color=$('subtitleColor').value;
+ const fontSize=Math.max(20,Math.round(base*(W/1280)));ctx.save();ctx.font=`700 ${fontSize}px system-ui, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+ const maxWidth=W*.86,words=text.split(/\s+/),wrapped=[];let line='';
+ for(const word of words){const test=line?line+' '+word:word;if(ctx.measureText(test).width>maxWidth&&line){wrapped.push(line);line=word}else line=test}if(line)wrapped.push(line);
+ const lineHeight=fontSize*1.22,padX=fontSize*.55,padY=fontSize*.32;const boxW=Math.min(maxWidth+padX*2,Math.max(...wrapped.map(t=>ctx.measureText(t).width))+padX*2);const boxH=wrapped.length*lineHeight+padY*2;const x=(W-boxW)/2,y=H-Math.max(H*.07,fontSize*.6)-boxH;
+ ctx.fillStyle='rgba(0,0,0,0.72)';const r=Math.min(fontSize*.25,18);ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+boxW-r,y);ctx.quadraticCurveTo(x+boxW,y,x+boxW,y+r);ctx.lineTo(x+boxW,y+boxH-r);ctx.quadraticCurveTo(x+boxW,y+boxH,x+boxW-r,y+boxH);ctx.lineTo(x+r,y+boxH);ctx.quadraticCurveTo(x,y+boxH,x,y+boxH-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();ctx.fill();
+ ctx.fillStyle=color;wrapped.forEach((lineText,i)=>ctx.fillText(lineText,W/2,y+padY+lineHeight*(i+.5),maxWidth));ctx.restore();
+}
+function drawFrame(index,p,timeSeconds){if(!photos.length){ctx.fillStyle='#080910';ctx.fillRect(0,0,canvas.width,canvas.height);return}drawCover(photos[index].img,p);drawSubtitle(timeSeconds===undefined?index*(+$('duration').value):timeSeconds)}
 function updateList(){const list=$('filelist');list.innerHTML='';photos.forEach((p,i)=>{const row=document.createElement('div');row.className='fileitem';row.innerHTML=`<img class="thumb" src="${p.url}"><div class="filemeta"><strong>${i+1}. ${escapeHtml(p.name)}</strong><small>${p.img.width} × ${p.img.height}</small></div><button class="mini" data-view="${i}">View</button><button class="mini" data-remove="${i}" aria-label="Remove photo">✕</button>`;list.appendChild(row)});list.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{stopPreview();current=+b.dataset.view;showCurrent()});list.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{const i=+b.dataset.remove;URL.revokeObjectURL(photos[i].url);photos.splice(i,1);current=Math.max(0,Math.min(current,photos.length-1));updateList();showCurrent()});$('empty').classList.toggle('hidden',photos.length>0);$('previewStatus').textContent=photos.length?`${photos.length} photo${photos.length===1?'':'s'} added · Previewing photo ${current+1} of ${photos.length}`:'No photos added yet.'}
 function showCurrent(){if(photos.length){drawFrame(current,0);$('empty').classList.add('hidden')}else{$('empty').classList.remove('hidden');drawFrame(0,0)}updateList()}
 const musicInput=$('musicInput');
@@ -155,10 +178,10 @@ $('exportBtn').onclick=async()=>{
     if(finished)return;
     try{
      const elapsed=(performance.now()-started)/1000;
-     if(elapsed>=total){drawFrame(photos.length-1,1);$('bar').style.width='99%';$('exportStatus').textContent='Finishing video…';finished=true;resolve();return}
+     if(elapsed>=total){drawFrame(photos.length-1,1,Math.max(0,total-0.05));$('bar').style.width='99%';$('exportStatus').textContent='Finishing video…';finished=true;resolve();return}
      const photoIndex=Math.min(photos.length-1,Math.floor(elapsed/dur));
      const local=(elapsed-photoIndex*dur)/dur;
-     drawFrame(photoIndex,local);
+     drawFrame(photoIndex,local,elapsed);
      const pct=Math.min(98,Math.floor(elapsed/total*100));
      $('bar').style.width=pct+'%';$('exportStatus').textContent=`Creating video… ${pct}% (${photoIndex+1}/${photos.length} photos)`;
      setTimeout(tick,Math.max(16,Math.floor(1000/fps)));
