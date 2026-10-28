@@ -45,19 +45,28 @@
       <h3>4 · Export your video</h3>
       <p style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:0">The app will combine all photos into one video with the selected motion. A longer story takes longer to export. For older phones, try 3–5 photos first.</p>
       <div class="field full" style="margin:12px 0 14px;padding:12px;background:#131522;border:1px solid #303347;border-radius:12px">
+        <label for="narrationInput">Story narration / voice-over (optional)</label>
+        <input class="audiofile" id="narrationInput" type="file" accept="audio/*">
+        <div class="status" id="narrationStatus">No narration selected.</div>
+        <label for="narrationVolume">Narration volume <span id="narrationVolumeLabel">100%</span></label>
+        <input id="narrationVolume" type="range" min="0" max="100" value="100">
+        <div class="actions"><button class="btn secondary" id="removeNarrationBtn" type="button">Remove narration</button></div>
+        <div class="tip">Upload a recorded voice-over or narration audio file from your phone. Narration starts at the beginning of the video and plays once; audio after the video ends will be cut off.</div>
+      </div>
+      <div class="field full" style="margin:0 0 14px;padding:12px;background:#131522;border:1px solid #303347;border-radius:12px">
         <label for="musicInput">Background music (optional)</label>
         <input class="audiofile" id="musicInput" type="file" accept="audio/*">
         <div class="status" id="musicStatus">No background music selected.</div>
         <label for="musicVolume">Music volume <span id="musicVolumeLabel">25%</span></label>
         <input id="musicVolume" type="range" min="0" max="100" value="25">
         <div class="actions"><button class="btn secondary" id="removeMusicBtn" type="button">Remove music</button></div>
-        <div class="tip">Choose an audio file from your phone. The music will loop if the story is longer than the track. Use music you have permission to use.</div>
+        <div class="tip">Music loops if the story is longer than the track. Keep music volume lower than narration so the voice stays clear. Use audio you have permission to use.</div>
       </div>
       <button class="btn primary" id="exportBtn" style="width:100%">Export story video</button>
       <div class="progress" id="progress"><div id="bar"></div></div>
       <div class="status" id="exportStatus">Ready when you are. No account, API key, or subscription required.</div>
       <a id="downloadLink" class="btn primary hidden" style="display:block;text-align:center;text-decoration:none;margin-top:12px" download="mine-motion-story.mp4">Download video</a>
-      <div class="tip">This version tries MP4 recording first. If your browser does not support it, it exports WebM instead. Narration and subtitles are not included yet.</div>
+      <div class="tip">This version tries MP4 recording first. If your browser does not support it, it exports WebM instead. Subtitles are not included yet.</div>
     </section>
   </div>
   <div class="footer">Mine Motion Studio · runs locally in your browser · no AI generation credits used</div>
@@ -66,7 +75,7 @@
 (() => {
 const $ = id => document.getElementById(id);
 const photoInput=$('photos'), canvas=$('canvas'), ctx=canvas.getContext('2d');
-let photos=[], current=0, raf=null, previewStart=0, exporting=false, lastUrl=null, musicFile=null;
+let photos=[], current=0, raf=null, previewStart=0, exporting=false, lastUrl=null, musicFile=null, narrationFile=null;
 const dims=()=>{const o=$('orientation').value;return o==='portrait'?[720,1280]:o==='square'?[900,900]:[1280,720]};
 function setCanvas(){const [w,h]=dims();canvas.width=w;canvas.height=h;$('preview').style.aspectRatio=w+'/'+h;if(photos.length)drawFrame(current,0)}
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -79,6 +88,10 @@ function drawFrame(index,p){if(!photos.length){ctx.fillStyle='#080910';ctx.fillR
 function updateList(){const list=$('filelist');list.innerHTML='';photos.forEach((p,i)=>{const row=document.createElement('div');row.className='fileitem';row.innerHTML=`<img class="thumb" src="${p.url}"><div class="filemeta"><strong>${i+1}. ${escapeHtml(p.name)}</strong><small>${p.img.width} × ${p.img.height}</small></div><button class="mini" data-view="${i}">View</button><button class="mini" data-remove="${i}" aria-label="Remove photo">✕</button>`;list.appendChild(row)});list.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{stopPreview();current=+b.dataset.view;showCurrent()});list.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{const i=+b.dataset.remove;URL.revokeObjectURL(photos[i].url);photos.splice(i,1);current=Math.max(0,Math.min(current,photos.length-1));updateList();showCurrent()});$('empty').classList.toggle('hidden',photos.length>0);$('previewStatus').textContent=photos.length?`${photos.length} photo${photos.length===1?'':'s'} added · Previewing photo ${current+1} of ${photos.length}`:'No photos added yet.'}
 function showCurrent(){if(photos.length){drawFrame(current,0);$('empty').classList.add('hidden')}else{$('empty').classList.remove('hidden');drawFrame(0,0)}updateList()}
 const musicInput=$('musicInput');
+const narrationInput=$('narrationInput');
+narrationInput.addEventListener('change',()=>{narrationFile=narrationInput.files&&narrationInput.files[0]?narrationInput.files[0]:null;$('narrationStatus').textContent=narrationFile?`Selected: ${narrationFile.name} · ${(narrationFile.size/1024/1024).toFixed(2)} MB`:'No narration selected.'});
+$('narrationVolume').addEventListener('input',()=>{$('narrationVolumeLabel').textContent=$('narrationVolume').value+'%'});
+$('removeNarrationBtn').onclick=()=>{narrationFile=null;narrationInput.value='';$('narrationStatus').textContent='No narration selected.'};
 musicInput.addEventListener('change',()=>{musicFile=musicInput.files&&musicInput.files[0]?musicInput.files[0]:null;$('musicStatus').textContent=musicFile?`Selected: ${musicFile.name} · ${(musicFile.size/1024/1024).toFixed(2)} MB`:'No background music selected.'});
 $('musicVolume').addEventListener('input',()=>{$('musicVolumeLabel').textContent=$('musicVolume').value+'%'});
 $('removeMusicBtn').onclick=()=>{musicFile=null;musicInput.value='';$('musicStatus').textContent='No background music selected.'};
@@ -96,24 +109,33 @@ $('exportBtn').onclick=async()=>{
  if(!photos.length){$('exportStatus').textContent='Please add at least one photo first.';return}
  if(!canvas.captureStream||!window.MediaRecorder){$('exportStatus').textContent='Video export is not supported in this browser. Please open this site in an up-to-date Google Chrome browser.';return}
  stopPreview();exporting=true;$('exportBtn').disabled=true;$('exportBtn').textContent='Exporting…';$('downloadLink').classList.add('hidden');$('progress').style.display='block';$('bar').style.width='0%';$('exportStatus').textContent='Starting video recorder…';
- let stream=null, recorder=null, chunks=[], audioContext=null, musicSource=null, musicGain=null, audioDestination=null;
+ let stream=null, recorder=null, chunks=[], audioContext=null, musicSource=null, musicGain=null, narrationSource=null, narrationGain=null, audioDestination=null;
  try{
   const fps=+$('fps').value,dur=+$('duration').value,total=photos.length*dur;
   // Draw the first frame before starting recording so the stream is not initially blank.
   drawFrame(0,0);
   stream=canvas.captureStream(fps);
-  // If music was selected, decode it and add an audio track to the video stream.
-  if(musicFile){
+  // Mix narration and background music into one audio track for the exported video.
+  if(musicFile||narrationFile){
    const AudioCtx=window.AudioContext||window.webkitAudioContext;
-   if(!AudioCtx)throw new Error('This browser does not support adding background music. Try an updated Chrome browser.');
+   if(!AudioCtx)throw new Error('This browser does not support audio in video export. Try an updated Chrome browser.');
    audioContext=new AudioCtx();
    await audioContext.resume();
-   const audioBytes=await musicFile.arrayBuffer();
-   const decoded=await audioContext.decodeAudioData(audioBytes.slice(0));
-   musicSource=audioContext.createBufferSource();musicSource.buffer=decoded;musicSource.loop=true;
-   musicGain=audioContext.createGain();musicGain.gain.value=(+$('musicVolume').value)/100;
    audioDestination=audioContext.createMediaStreamDestination();
-   musicSource.connect(musicGain);musicGain.connect(audioDestination);musicSource.start(0);
+   if(musicFile){
+    const musicBytes=await musicFile.arrayBuffer();
+    const decodedMusic=await audioContext.decodeAudioData(musicBytes.slice(0));
+    musicSource=audioContext.createBufferSource();musicSource.buffer=decodedMusic;musicSource.loop=true;
+    musicGain=audioContext.createGain();musicGain.gain.value=(+$('musicVolume').value)/100;
+    musicSource.connect(musicGain);musicGain.connect(audioDestination);musicSource.start(0);
+   }
+   if(narrationFile){
+    const narrationBytes=await narrationFile.arrayBuffer();
+    const decodedNarration=await audioContext.decodeAudioData(narrationBytes.slice(0));
+    narrationSource=audioContext.createBufferSource();narrationSource.buffer=decodedNarration;narrationSource.loop=false;
+    narrationGain=audioContext.createGain();narrationGain.gain.value=(+$('narrationVolume').value)/100;
+    narrationSource.connect(narrationGain);narrationGain.connect(audioDestination);narrationSource.start(0);
+   }
    audioDestination.stream.getAudioTracks().forEach(track=>stream.addTrack(track));
   }
   const type=supportedVideoType();
@@ -161,6 +183,7 @@ $('exportBtn').onclick=async()=>{
   try{if(recorder&&recorder.state!=='inactive')recorder.stop()}catch(e){}
  }finally{
   try{if(musicSource)musicSource.stop()}catch(e){}
+  try{if(narrationSource)narrationSource.stop()}catch(e){}
   try{if(audioContext)await audioContext.close()}catch(e){}
   if(stream)stream.getTracks().forEach(t=>t.stop());
   exporting=false;$('exportBtn').disabled=false;$('exportBtn').textContent='Export story video';
