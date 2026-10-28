@@ -79,28 +79,61 @@ function animatePreview(){if(!photos.length)return;stopPreview();$('playBtn').te
 $('playBtn').onclick=()=>{if(raf)stopPreview();else animatePreview()};
 function mimeType(){for(const t of ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']){if(window.MediaRecorder&&MediaRecorder.isTypeSupported(t))return t}return ''}
 $('exportBtn').onclick=async()=>{
- if(exporting)return;if(!photos.length){$('exportStatus').textContent='Please add at least one photo first.';return}
- if(!canvas.captureStream||!window.MediaRecorder){$('exportStatus').textContent='Video export is not supported in this browser. Please open this file in an up-to-date Google Chrome browser.';return}
- stopPreview();exporting=true;$('exportBtn').disabled=true;$('exportBtn').textContent='Exporting…';$('downloadLink').classList.add('hidden');$('progress').style.display='block';$('bar').style.width='0%';$('exportStatus').textContent='Preparing video…';
+ if(exporting)return;
+ if(!photos.length){$('exportStatus').textContent='Please add at least one photo first.';return}
+ if(!canvas.captureStream||!window.MediaRecorder){$('exportStatus').textContent='Video export is not supported in this browser. Please open this site in an up-to-date Google Chrome browser.';return}
+ stopPreview();exporting=true;$('exportBtn').disabled=true;$('exportBtn').textContent='Exporting…';$('downloadLink').classList.add('hidden');$('progress').style.display='block';$('bar').style.width='0%';$('exportStatus').textContent='Starting video recorder…';
+ let stream=null, recorder=null, chunks=[];
  try{
- const fps=+$('fps').value,dur=+$('duration').value,total=photos.length*dur;
- const stream=canvas.captureStream(fps), type=mimeType();const options={videoBitsPerSecond:4500000};if(type)options.mimeType=type;
- const recorder=new MediaRecorder(stream,options),chunks=[];
- recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
- const done=new Promise((resolve,reject)=>{recorder.onstop=resolve;recorder.onerror=()=>reject(new Error('Recording failed'))});
- recorder.start(1000);const start=performance.now();let idx=0;
- await new Promise((resolve,reject)=>{
-  function frame(now){if(!exporting){try{recorder.stop()}catch(e){}reject(new Error('Export cancelled'));return}
-   const elapsed=(now-start)/1000;if(elapsed>=total){drawFrame(photos.length-1,1);resolve();return}
-   const photoIndex=Math.min(photos.length-1,Math.floor(elapsed/dur));const local=(elapsed-photoIndex*dur)/dur;drawFrame(photoIndex,local);
-   const pct=Math.min(99,Math.floor(elapsed/total*100));$('bar').style.width=pct+'%';$('exportStatus').textContent=`Creating video… ${pct}% (${photoIndex+1}/${photos.length} photos)`;idx=photoIndex;requestAnimationFrame(frame)
-  }requestAnimationFrame(frame)
- });
- await new Promise(r=>setTimeout(r,250));recorder.stop();await done;stream.getTracks().forEach(t=>t.stop());
- const blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});if(!blob.size)throw new Error('The browser created an empty video. Please try again.');
- if(lastUrl)URL.revokeObjectURL(lastUrl);lastUrl=URL.createObjectURL(blob);const link=$('downloadLink');link.href=lastUrl;link.download='mine-motion-story.webm';link.classList.remove('hidden');$('bar').style.width='100%';$('exportStatus').textContent=`Video ready · ${(blob.size/1024/1024).toFixed(1)} MB · ${total} seconds. Tap Download video and save it to your phone.`;
- }catch(err){$('exportStatus').textContent='Export could not finish: '+(err.message||'unknown error')+'. Try fewer photos, a shorter duration, or close other apps and retry.'}
- finally{exporting=false;$('exportBtn').disabled=false;$('exportBtn').textContent='Export story video'}
+  const fps=+$('fps').value,dur=+$('duration').value,total=photos.length*dur;
+  // Draw the first frame before starting recording so the stream is not initially blank.
+  drawFrame(0,0);
+  stream=canvas.captureStream(fps);
+  const type=mimeType();
+  const options={videoBitsPerSecond:2500000};if(type)options.mimeType=type;
+  recorder=new MediaRecorder(stream,options);
+  recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+  const done=new Promise((resolve,reject)=>{
+   recorder.addEventListener('stop',resolve,{once:true});
+   recorder.addEventListener('error',()=>reject(new Error('The browser stopped recording unexpectedly.')),{once:true});
+  });
+  recorder.start(500);
+  $('exportStatus').textContent='Creating video… 0%';
+  const started=performance.now();
+  await new Promise((resolve,reject)=>{
+   let finished=false;
+   function tick(){
+    if(finished)return;
+    try{
+     const elapsed=(performance.now()-started)/1000;
+     if(elapsed>=total){drawFrame(photos.length-1,1);$('bar').style.width='99%';$('exportStatus').textContent='Finishing video…';finished=true;resolve();return}
+     const photoIndex=Math.min(photos.length-1,Math.floor(elapsed/dur));
+     const local=(elapsed-photoIndex*dur)/dur;
+     drawFrame(photoIndex,local);
+     const pct=Math.min(98,Math.floor(elapsed/total*100));
+     $('bar').style.width=pct+'%';$('exportStatus').textContent=`Creating video… ${pct}% (${photoIndex+1}/${photos.length} photos)`;
+     setTimeout(tick,Math.max(16,Math.floor(1000/fps)));
+    }catch(e){finished=true;reject(e)}
+   }
+   setTimeout(tick,0);
+  });
+  // Allow the final frame to be captured before stopping the recorder.
+  await new Promise(r=>setTimeout(r,300));
+  if(recorder.state!=='inactive')recorder.stop();
+  await done;
+  const blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});
+  if(!blob.size)throw new Error('The browser created an empty video. Try again in Chrome with one small photo.');
+  if(lastUrl)URL.revokeObjectURL(lastUrl);
+  lastUrl=URL.createObjectURL(blob);
+  const link=$('downloadLink');link.href=lastUrl;link.download='mine-motion-story.webm';link.classList.remove('hidden');
+  $('bar').style.width='100%';$('exportStatus').textContent=`Video ready · ${(blob.size/1024/1024).toFixed(1)} MB · ${total} seconds. Tap Download video to save it to your phone.`;
+ }catch(err){
+  $('exportStatus').textContent='Export could not finish: '+(err&&err.message?err.message:'unknown error')+'. Keep this page open and try again with one small photo.';
+  try{if(recorder&&recorder.state!=='inactive')recorder.stop()}catch(e){}
+ }finally{
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  exporting=false;$('exportBtn').disabled=false;$('exportBtn').textContent='Export story video';
+ }
 };
 setCanvas();showCurrent();
 })();
