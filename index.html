@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Mine Motion Studio</title>
+<style>
+:root{--bg:#10111b;--panel:#191b29;--panel2:#222538;--gold:#f4c56a;--text:#f7f4ee;--muted:#b8bac8;--line:#34374b;--green:#8ce0b0}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top right,#30243a 0,#10111b 42%);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text)}
+.wrap{max-width:980px;margin:auto;padding:18px 14px 40px}.brand{display:flex;gap:12px;align-items:center;margin:6px 0 18px}.logo{width:48px;height:48px;border-radius:15px;background:linear-gradient(135deg,#ffe2a0,#b77825);display:grid;place-items:center;color:#201708;font-size:25px;font-weight:900;box-shadow:0 6px 22px #0005}.brand h1{font-size:22px;margin:0;letter-spacing:.2px}.brand p{margin:3px 0 0;color:var(--muted);font-size:13px}.badge{margin-left:auto;border:1px solid #655337;color:#f5d69a;border-radius:99px;padding:6px 9px;font-size:11px;white-space:nowrap}
+.hero{padding:18px;border:1px solid #55452d;background:linear-gradient(120deg,#30271b,#1b1d2a 65%);border-radius:20px;margin-bottom:14px}.hero h2{font-size:20px;margin:0 0 7px}.hero p{color:#d1ccbf;font-size:14px;line-height:1.5;margin:0}.grid{display:grid;grid-template-columns:1fr;gap:14px}.card{background:#191b29eF;border:1px solid var(--line);border-radius:18px;padding:16px}.card h3{font-size:15px;margin:0 0 13px}.drop{border:1.5px dashed #66647a;border-radius:15px;padding:20px 12px;text-align:center;background:#151724;cursor:pointer}.drop strong{display:block;margin:7px 0 4px}.drop small{color:var(--muted);line-height:1.4}.drop input{display:none}.btn{border:0;border-radius:12px;padding:12px 15px;font-weight:750;font-size:14px;cursor:pointer}.primary{background:linear-gradient(135deg,#ffdc91,#e6a947);color:#211607}.secondary{background:var(--panel2);color:var(--text);border:1px solid #41445a}.danger{background:#3a202b;color:#ffcad5;border:1px solid #643445}.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{min-width:0}.field.full{grid-column:1/-1}label{display:block;color:#d8d9e2;font-size:12px;margin:0 0 7px}select,input[type=number]{width:100%;background:#111320;color:var(--text);border:1px solid #3a3d52;border-radius:10px;padding:11px;font-size:14px}input[type=range]{width:100%;accent-color:var(--gold)}.range-row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}.preview{background:#080910;border-radius:14px;overflow:hidden;position:relative;aspect-ratio:16/9;border:1px solid #3b3d4b}.preview canvas{width:100%;height:100%;display:block}.preview-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#aaaabb;font-size:13px;padding:20px}.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.actions .btn{flex:1}.filelist{display:grid;gap:8px;margin-top:12px}.fileitem{display:flex;align-items:center;gap:10px;padding:8px;background:#131522;border:1px solid #303347;border-radius:12px}.thumb{width:52px;height:48px;object-fit:cover;border-radius:8px;background:#292b3b}.filemeta{min-width:0;flex:1}.filemeta strong{display:block;font-size:12px;overflow-wrap:anywhere}.filemeta small{color:var(--muted);font-size:11px}.mini{border:1px solid #44465a;background:#25283a;color:#fff;border-radius:8px;padding:7px 9px}.progress{height:8px;background:#2a2c3d;border-radius:20px;overflow:hidden;margin-top:12px;display:none}.progress div{height:100%;width:0;background:linear-gradient(90deg,#e8a640,#ffe2a0);transition:width .2s}.status{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}.tip{border-left:3px solid var(--gold);padding:10px 12px;background:#242131;border-radius:0 10px 10px 0;font-size:12px;color:#ded9ce;line-height:1.5;margin-top:12px}.footer{text-align:center;color:#888b9d;font-size:11px;padding:18px 0 0}.hidden{display:none!important}
+@media(min-width:760px){.grid{grid-template-columns:1fr 1fr}.hero h2{font-size:23px}.wrap{padding-top:26px}.brand h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="brand"><div class="logo">M</div><div><h1>Mine Motion Studio</h1><p>Bring your story photos to life</p></div><div class="badge">FREE • NO AI CREDITS</div></header>
+  <section class="hero"><h2>Simple Ken Burns photo videos</h2><p>Add your already-prepared story pictures, choose a gentle pan and zoom, then export a video. Your photos are processed on this device; they are not uploaded to a server.</p></section>
+  <div class="grid">
+    <section class="card">
+      <h3>1 · Add your story photos</h3>
+      <label class="drop" for="photos"><span style="font-size:28px">＋</span><strong>Tap to choose photos</strong><small>Select several images in story order<br>JPG, PNG or WebP recommended</small><input id="photos" type="file" accept="image/*" multiple></label>
+      <div class="filelist" id="filelist"></div>
+      <div class="actions"><button class="btn secondary" id="clearBtn">Clear all photos</button></div>
+      <div class="tip">Tip: choose your pictures in the order you want them to appear. Keep the tab open while exporting.</div>
+    </section>
+    <section class="card">
+      <h3>2 · Motion settings</h3>
+      <div class="controls">
+        <div class="field"><label for="orientation">Video shape</label><select id="orientation"><option value="landscape">Landscape · YouTube (16:9)</option><option value="portrait">Portrait · Reels/Shorts (9:16)</option><option value="square">Square (1:1)</option></select></div>
+        <div class="field"><label for="duration">Seconds per photo</label><select id="duration"><option value="3">3 seconds</option><option value="5" selected>5 seconds</option><option value="8">8 seconds</option><option value="10">10 seconds</option><option value="12">12 seconds</option></select></div>
+        <div class="field full"><label for="motion">Ken Burns movement</label><select id="motion"><option value="gentle">Gentle zoom in</option><option value="out">Gentle zoom out</option><option value="left">Pan left to right</option><option value="right">Pan right to left</option><option value="up">Pan bottom to top</option><option value="down">Pan top to bottom</option><option value="alternate" selected>Mix movements automatically</option><option value="still">Still image (no movement)</option></select></div>
+        <div class="field full"><label for="zoom">Motion strength <span id="zoomLabel">18%</span></label><input id="zoom" type="range" min="5" max="35" value="18"><div class="range-row"><span>Subtle</span><span>More movement</span></div></div>
+        <div class="field full"><label for="fps">Video smoothness</label><select id="fps"><option value="24">24 FPS · smaller file</option><option value="30" selected>30 FPS · smooth</option></select></div>
+      </div>
+      <div class="tip">Export format: WebM video. Most recent Chrome for Android versions support recording canvas animations, but some editing apps may prefer MP4. If your editor does not accept WebM, convert it to MP4 in a trusted video editor/converter.</div>
+    </section>
+    <section class="card">
+      <h3>3 · Preview your movement</h3>
+      <div class="preview" id="preview"><canvas id="canvas" width="1280" height="720"></canvas><div class="preview-empty" id="empty">Your photo preview will appear here<br>after you add pictures.</div></div>
+      <div class="actions"><button class="btn secondary" id="prevBtn">← Previous</button><button class="btn secondary" id="playBtn">▶ Play preview</button><button class="btn secondary" id="nextBtn">Next →</button></div>
+      <div class="status" id="previewStatus">No photos added yet.</div>
+    </section>
+    <section class="card">
+      <h3>4 · Export your video</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:0">The app will combine all photos into one video with the selected motion. A longer story takes longer to export. For older phones, try 3–5 photos first.</p>
+      <button class="btn primary" id="exportBtn" style="width:100%">Export story video</button>
+      <div class="progress" id="progress"><div id="bar"></div></div>
+      <div class="status" id="exportStatus">Ready when you are. No account, API key, or subscription required.</div>
+      <a id="downloadLink" class="btn primary hidden" style="display:block;text-align:center;text-decoration:none;margin-top:12px" download="mine-motion-story.webm">Download video</a>
+      <div class="tip">This is a starter version of your own app. It creates the visual motion video only; narration, background music, subtitles and MP4 export are not included yet.</div>
+    </section>
+  </div>
+  <div class="footer">Mine Motion Studio · runs locally in your browser · no AI generation credits used</div>
+</div>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const photoInput=$('photos'), canvas=$('canvas'), ctx=canvas.getContext('2d');
+let photos=[], current=0, raf=null, previewStart=0, exporting=false, lastUrl=null;
+const dims=()=>{const o=$('orientation').value;return o==='portrait'?[720,1280]:o==='square'?[900,900]:[1280,720]};
+function setCanvas(){const [w,h]=dims();canvas.width=w;canvas.height=h;$('preview').style.aspectRatio=w+'/'+h;if(photos.length)drawFrame(current,0)}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function drawCover(img,p){const W=canvas.width,H=canvas.height;const scale=Math.max(W/img.width,H/img.height);const sw=W/scale,sh=H/scale;let sx=(img.width-sw)/2,sy=(img.height-sh)/2;let z=1;const amount=+$('zoom').value/100;const mode=$('motion').value;let m=mode;if(mode==='alternate'){const list=['gentle','out','left','right','up','down'];m=list[p%list.length]}if(m==='gentle')z=1+amount*p;else if(m==='out')z=1+amount*(1-p);else if(m!=='still'){z=1+amount*.45}
+const zw=sw/z,zh=sh/z;
+if(m==='left')sx+=(sw-zw)*p;else if(m==='right')sx+=(sw-zw)*(1-p);else if(m==='up')sy+=(sh-zh)*(1-p);else if(m==='down')sy+=(sh-zh)*p;else{sx+=(sw-zw)/2;sy+=(sh-zh)/2}
+sx=Math.max(0,Math.min(img.width-zw,sx));sy=Math.max(0,Math.min(img.height-zh,sy));
+ctx.fillStyle='#080910';ctx.fillRect(0,0,W,H);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,sx,sy,zw,zh,0,0,W,H)}
+function drawFrame(index,p){if(!photos.length){ctx.fillStyle='#080910';ctx.fillRect(0,0,canvas.width,canvas.height);return}drawCover(photos[index].img,p)}
+function updateList(){const list=$('filelist');list.innerHTML='';photos.forEach((p,i)=>{const row=document.createElement('div');row.className='fileitem';row.innerHTML=`<img class="thumb" src="${p.url}"><div class="filemeta"><strong>${i+1}. ${escapeHtml(p.name)}</strong><small>${p.img.width} × ${p.img.height}</small></div><button class="mini" data-view="${i}">View</button><button class="mini" data-remove="${i}" aria-label="Remove photo">✕</button>`;list.appendChild(row)});list.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{stopPreview();current=+b.dataset.view;showCurrent()});list.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{const i=+b.dataset.remove;URL.revokeObjectURL(photos[i].url);photos.splice(i,1);current=Math.max(0,Math.min(current,photos.length-1));updateList();showCurrent()});$('empty').classList.toggle('hidden',photos.length>0);$('previewStatus').textContent=photos.length?`${photos.length} photo${photos.length===1?'':'s'} added · Previewing photo ${current+1} of ${photos.length}`:'No photos added yet.'}
+function showCurrent(){if(photos.length){drawFrame(current,0);$('empty').classList.add('hidden')}else{$('empty').classList.remove('hidden');drawFrame(0,0)}updateList()}
+photoInput.addEventListener('change',async e=>{const files=[...e.target.files];for(const f of files){if(!f.type.startsWith('image/'))continue;try{const url=URL.createObjectURL(f);const img=new Image();await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=url});photos.push({name:f.name,url,img})}catch(err){console.warn('Could not load',f.name)}}current=0;setCanvas();showCurrent();photoInput.value=''});
+$('clearBtn').onclick=()=>{stopPreview();photos.forEach(p=>URL.revokeObjectURL(p.url));photos=[];current=0;updateList();showCurrent();$('exportStatus').textContent='Ready when you are.'};
+$('orientation').onchange=setCanvas;$('zoom').oninput=()=>{$('zoomLabel').textContent=$('zoom').value+'%';if(photos.length)drawFrame(current,0)};
+$('prevBtn').onclick=()=>{stopPreview();if(photos.length){current=(current-1+photos.length)%photos.length;showCurrent()}};
+$('nextBtn').onclick=()=>{stopPreview();if(photos.length){current=(current+1)%photos.length;showCurrent()}};
+function stopPreview(){if(raf)cancelAnimationFrame(raf);raf=null;$('playBtn').textContent='▶ Play preview'}
+function animatePreview(){if(!photos.length)return;stopPreview();$('playBtn').textContent='Ⅱ Pause preview';const dur=+$('duration').value*1000;previewStart=performance.now();function step(now){const elapsed=now-previewStart;const p=(elapsed%dur)/dur;current=Math.floor(elapsed/dur)%photos.length;drawFrame(current,p);$('previewStatus').textContent=`Previewing photo ${current+1} of ${photos.length}`;raf=requestAnimationFrame(step)}raf=requestAnimationFrame(step)}
+$('playBtn').onclick=()=>{if(raf)stopPreview();else animatePreview()};
+function mimeType(){for(const t of ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']){if(window.MediaRecorder&&MediaRecorder.isTypeSupported(t))return t}return ''}
+$('exportBtn').onclick=async()=>{
+ if(exporting)return;if(!photos.length){$('exportStatus').textContent='Please add at least one photo first.';return}
+ if(!canvas.captureStream||!window.MediaRecorder){$('exportStatus').textContent='Video export is not supported in this browser. Please open this file in an up-to-date Google Chrome browser.';return}
+ stopPreview();exporting=true;$('exportBtn').disabled=true;$('exportBtn').textContent='Exporting…';$('downloadLink').classList.add('hidden');$('progress').style.display='block';$('bar').style.width='0%';$('exportStatus').textContent='Preparing video…';
+ try{
+ const fps=+$('fps').value,dur=+$('duration').value,total=photos.length*dur;
+ const stream=canvas.captureStream(fps), type=mimeType();const options={videoBitsPerSecond:4500000};if(type)options.mimeType=type;
+ const recorder=new MediaRecorder(stream,options),chunks=[];
+ recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+ const done=new Promise((resolve,reject)=>{recorder.onstop=resolve;recorder.onerror=()=>reject(new Error('Recording failed'))});
+ recorder.start(1000);const start=performance.now();let idx=0;
+ await new Promise((resolve,reject)=>{
+  function frame(now){if(!exporting){try{recorder.stop()}catch(e){}reject(new Error('Export cancelled'));return}
+   const elapsed=(now-start)/1000;if(elapsed>=total){drawFrame(photos.length-1,1);resolve();return}
+   const photoIndex=Math.min(photos.length-1,Math.floor(elapsed/dur));const local=(elapsed-photoIndex*dur)/dur;drawFrame(photoIndex,local);
+   const pct=Math.min(99,Math.floor(elapsed/total*100));$('bar').style.width=pct+'%';$('exportStatus').textContent=`Creating video… ${pct}% (${photoIndex+1}/${photos.length} photos)`;idx=photoIndex;requestAnimationFrame(frame)
+  }requestAnimationFrame(frame)
+ });
+ await new Promise(r=>setTimeout(r,250));recorder.stop();await done;stream.getTracks().forEach(t=>t.stop());
+ const blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});if(!blob.size)throw new Error('The browser created an empty video. Please try again.');
+ if(lastUrl)URL.revokeObjectURL(lastUrl);lastUrl=URL.createObjectURL(blob);const link=$('downloadLink');link.href=lastUrl;link.download='mine-motion-story.webm';link.classList.remove('hidden');$('bar').style.width='100%';$('exportStatus').textContent=`Video ready · ${(blob.size/1024/1024).toFixed(1)} MB · ${total} seconds. Tap Download video and save it to your phone.`;
+ }catch(err){$('exportStatus').textContent='Export could not finish: '+(err.message||'unknown error')+'. Try fewer photos, a shorter duration, or close other apps and retry.'}
+ finally{exporting=false;$('exportBtn').disabled=false;$('exportBtn').textContent='Export story video'}
+};
+setCanvas();showCurrent();
+})();
+</script>
+</body>
+</html>
